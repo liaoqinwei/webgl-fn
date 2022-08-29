@@ -1,5 +1,24 @@
 import { initShader, getRectangleVertex, computedCenterPointer, computedModelMatrix } from "../util";
 import resizeCanvas from "../resizeCanvas";
+import * as dat from 'dat.gui';
+
+const translate = [0, 0]
+const rotate = [0, 0]
+const scale = [1.5, 1]
+
+const gui = new dat.GUI();
+
+const transform = gui.addFolder('transform')
+transform.add(translate, 0, 0, 300).name('X轴位移').onChange(draw)
+transform.add(translate, 1, 0, 300).name('Y轴位移').onChange(draw)
+transform.add({ rotate: 0 }, 'rotate', 0, 360).name('旋转').onChange((val: number) => {
+    rotate.fill(val)
+    draw()
+})
+transform.add(scale, 0, 1, 5).name('X轴缩放').onChange(draw)
+transform.add(scale, 1, 1, 5).name('Y轴缩放').onChange(draw)
+
+
 resizeCanvas(render);
 /**
  * 二维矩阵变化
@@ -59,21 +78,24 @@ const u_position = gl.getAttribLocation(program, "u_position");
 const uPositionBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, uPositionBuffer);
 
-const positionData = getRectangleVertex(100, 100, 200, 200);
+const positionData = getRectangleVertex(500, 100, 400, 200);
+
 
 draw();
 
 function draw() {
     gl.uniform2f(u_resolution, render.width, render.height);
     const modelMatrix = computedModelMatrix({
-        origin: computedCenterPointer(positionData, 2),
-        translate:[0,0],
-        rotate:[0,0],
-        scale:[1.5,1],
+        // cen: computedCenterPointer(positionData, 2),
+        origin:computedCenterPointer(positionData, 2).center,
+        centerByWorld: computedCenterPointer(positionData, 2).centerByWorld,
+        translate: translate,
+        rotate: rotate,
+        scale: scale,
     }, 2)
 
-    console.log(modelMatrix);
-    
+console.log(modelMatrix);
+
     gl.uniformMatrix3fv(model_matraix, false, modelMatrix)
     gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(u_position);
