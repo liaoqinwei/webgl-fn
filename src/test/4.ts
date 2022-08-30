@@ -5,18 +5,52 @@ import * as dat from 'dat.gui';
 const translate = [0, 0]
 const rotate = [0, 0]
 const scale = [1.5, 1]
+const originSetter = ["center", "center"]
+const origin: Array<number> = []
 
 const gui = new dat.GUI();
+
+const transformOrigin = gui.addFolder('transform-origin')
+transformOrigin.add(originSetter, 0, ["left", "center", "right"]).name("origin-x").onChange((x: string) => {
+    switch (x) {
+        case "left":
+            origin[0] = 0
+            break
+        case "center":
+            origin[0] = center[0]
+            break
+        case "right":
+            origin[0] = center[0] * 2
+            break
+    }
+    draw()
+})
+transformOrigin.add(originSetter, 0, ["top", "center", "bottom"]).name("origin-y").onChange((x: string) => {
+    switch (x) {
+        case "top":
+            origin[1] = 0
+            break
+        case "center":
+            origin[1] = center[1]
+            break
+        case "bottom":
+            origin[1] = center[1] * 2
+            break
+    }
+
+    draw()
+})
+
 
 const transform = gui.addFolder('transform')
 transform.add(translate, 0, 0, 300).name('X轴位移').onChange(draw)
 transform.add(translate, 1, 0, 300).name('Y轴位移').onChange(draw)
-transform.add({ rotate: 0 }, 'rotate', 0, 360).name('旋转').onChange((val: number) => {
+transform.add({ rotate: 0 }, 'rotate', -360, 360).name('旋转').onChange((val: number) => {
     rotate.fill(val)
     draw()
 })
-transform.add(scale, 0, 1, 5).name('X轴缩放').onChange(draw)
-transform.add(scale, 1, 1, 5).name('Y轴缩放').onChange(draw)
+transform.add(scale, 0, 0, 5).name('X轴缩放').onChange(draw)
+transform.add(scale, 1, 0, 5).name('Y轴缩放').onChange(draw)
 
 
 resizeCanvas(render);
@@ -78,24 +112,27 @@ const u_position = gl.getAttribLocation(program, "u_position");
 const uPositionBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, uPositionBuffer);
 
-const positionData = getRectangleVertex(500, 100, 400, 200);
+const positionData = getRectangleVertex(500, 100, 200, 200);
 
+
+const { center, centerByWorld } = computedCenterPointer(positionData, 2)
+console.log(center);
 
 draw();
-
 function draw() {
     gl.uniform2f(u_resolution, render.width, render.height);
+    console.log(origin);
+    
     const modelMatrix = computedModelMatrix({
         // cen: computedCenterPointer(positionData, 2),
-        // origin:[0,0],
-        center:computedCenterPointer(positionData, 2).center,
-        centerByWorld: computedCenterPointer(positionData, 2).centerByWorld,
+        origin: origin,
+        center: center,
+        centerByWorld: centerByWorld,
         translate: translate,
         rotate: rotate,
         scale: scale,
     }, 2)
 
-console.log(modelMatrix);
 
     gl.uniformMatrix3fv(model_matraix, false, modelMatrix)
     gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.STATIC_DRAW);

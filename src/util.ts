@@ -89,16 +89,18 @@ export function getVN<T>(o: T, k: keyof T): number {
 
 
 const getSinCos = (radian: number): SinCos => ({ sin: Math.sin(radian), cos: Math.cos(radian) })
+const isNone = (o: any) => o === undefined || o === undefined
 export function computedModelMatrix(
     { translate = [0, 0, 0],
         rotate = [0, 0, 0],
         center = [0, 0, 0],// 中心点
-        origin,// 变化的原点
+        origin = [],// 变化的原点
         scale = [1, 1, 1],
         centerByWorld = [0, 0, 0] }: TransformParam,
     dimension: Dimension
 ): Float32Array {
-    if (!origin) origin = center // 默认为元素中心点变化
+    for (const [i, p] of (center as Array<number>).entries())
+        isNone(origin[i]) && ((origin as Array<number>)[i] = p)
     let modelMatrix = new Float32Array(Math.pow(dimension + 1, 2));
     const translateVec3 = [getVN(translate, 0), getVN(translate, 1), getVN(translate, 2)]
     const radianVec3 = [radian(getVN(rotate, 0)), radian(getVN(rotate, 1)), radian(getVN(rotate, 2))]
