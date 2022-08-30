@@ -80,7 +80,7 @@ export function computedCenterPointer(
         center
     };
 }
-export function getValNumber<T>(o: T, k: keyof T): number {
+export function getVN<T>(o: T, k: keyof T): number {
     return isNaN(Number(o[k])) ? 0 : Number(o[k]);
 }
 
@@ -92,30 +92,49 @@ const getSinCos = (radian: number): SinCos => ({ sin: Math.sin(radian), cos: Mat
 export function computedModelMatrix(
     { translate = [0, 0, 0],
         rotate = [0, 0, 0],
-        origin = [0, 0, 0],
+        center = [0, 0, 0],// 中心点
+        origin,// 变化的原点
         scale = [1, 1, 1],
         centerByWorld = [0, 0, 0] }: TransformParam,
     dimension: Dimension
 ): Float32Array {
+    if (!origin) origin = center // 默认为元素中心点变化
     let modelMatrix = new Float32Array(Math.pow(dimension + 1, 2));
-    const translateVec3 = [getValNumber(translate, 0), getValNumber(translate, 1), getValNumber(translate, 2)]
-    const radianVec3 = [radian(getValNumber(rotate, 0)), radian(getValNumber(rotate, 1)), radian(getValNumber(rotate, 2))]
-    const scaleVec3 = [getValNumber(scale, 0), getValNumber(scale, 1), getValNumber(scale, 2)]
-    const centerByWorldVec3 = [getValNumber(centerByWorld, 0), getValNumber(centerByWorld, 1), getValNumber(centerByWorld, 2)]
+    const translateVec3 = [getVN(translate, 0), getVN(translate, 1), getVN(translate, 2)]
+    const radianVec3 = [radian(getVN(rotate, 0)), radian(getVN(rotate, 1)), radian(getVN(rotate, 2))]
+    const scaleVec3 = [getVN(scale, 0), getVN(scale, 1), getVN(scale, 2)]
+    const transformCenter = [getVN(centerByWorld, 0) - (getVN(center, 0) - getVN(origin, 0)),
+    getVN(centerByWorld, 1) - (getVN(center, 1) - getVN(origin, 1)),
+    getVN(centerByWorld, 2) - (getVN(center, 2) - getVN(origin, 2))]
     const radianSinCos: Array<SinCos> = [getSinCos(radianVec3[0]), getSinCos(radianVec3[1]), getSinCos(radianVec3[2])]
 
+
+    /**
+     * ! 二维矩阵旋转、缩放、位移变化
+     * 假设： 缩放倍率(Sx,Sy)，变换原点为(Cx,Cy)，位移为(Tx,Ty)，旋转θ，矩阵变换如下
+     *     缩放矩阵   *    旋转矩阵
+     * [ Sx  0   0      [ cosθ  -sinθ  0 
+     *   0   Sy  0        sinθ  cosθ   0     =  rs[]
+     *   0   0   1 ]       0     0     1 ]
+     * 
+     *     变换原点转换
+     * [ 1 0 Cx                     [ 1 0 -Cx
+     *   0 1 Cy    *   rs[]    *      0 1 -Cy    = RS[]
+     *   0 0  1 ]                     0 0  1 ]
+     * 
+     *         [ 0 0 Tx
+     * RS[] +    0 0 Ty     = M[]  
+     *           0 0  0 ]    
+     */
     switch (dimension.toString()) {
         case "2":
-            const radianTx = (1 - radianSinCos[0].cos) * centerByWorldVec3[0] + radianSinCos[0].sin * centerByWorldVec3[1]
-            const radianTy = (1 - radianSinCos[1].cos) * centerByWorldVec3[1] - centerByWorldVec3[0] * radianSinCos[1].sin
-            const Tx = radianTx * scaleVec3[0] + (1 - scaleVec3[0]) * centerByWorld[0]
-            const Ty = radianTy * scaleVec3[1] + (1 - scaleVec3[1]) * centerByWorld[1]
-
-            modelMatrix.set(
-                [radianSinCos[0].cos * scaleVec3[0], radianSinCos[0].sin * scaleVec3[1], 0,
-                - radianSinCos[0].sin * scaleVec3[0], radianSinCos[0].cos * scaleVec3[1], 0,
+            const Tx = - scaleVec3[0] * radianSinCos[0].cos * transformCenter[0] + scaleVec3[1] * radianSinCos[0].sin * transformCenter[1] + transformCenter[0]
+            const Ty = -scaleVec3[0] * radianSinCos[0].sin * transformCenter[0] - scaleVec3[1] * radianSinCos[0].cos * transformCenter[1] + transformCenter[1]
+            modelMatrix.set([
+                radianSinCos[0].cos * scaleVec3[0], radianSinCos[0].sin * scaleVec3[0], 0,
+                -radianSinCos[0].sin * scaleVec3[1], radianSinCos[0].cos * scaleVec3[1], 0,
                 Tx + translateVec3[0], Ty + translateVec3[1], 1
-                ]);
+            ]);
         // modelMatrix.set([radianSinCos[0].cos, - radianSinCos[0].sin, tx,
         // radianSinCos[0].sin, radianSinCos[0].cos, ty,
         //     0, 0, 1

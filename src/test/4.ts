@@ -87,7 +87,8 @@ function draw() {
     gl.uniform2f(u_resolution, render.width, render.height);
     const modelMatrix = computedModelMatrix({
         // cen: computedCenterPointer(positionData, 2),
-        origin:computedCenterPointer(positionData, 2).center,
+        // origin:[0,0],
+        center:computedCenterPointer(positionData, 2).center,
         centerByWorld: computedCenterPointer(positionData, 2).centerByWorld,
         translate: translate,
         rotate: rotate,
